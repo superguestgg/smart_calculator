@@ -24,6 +24,10 @@ def operation_surprise(a, b):
     return a+b+a*b
 # 91 percent max
 
+def operation_string_a_b(a, b):
+    return a*10+b
+# max percent 97
+
 
 def get_data(operation=operation_plus):
     training_data = []
