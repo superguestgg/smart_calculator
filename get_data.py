@@ -7,10 +7,22 @@ def get_ranges():
 
 def operation_plus(a, b):
     return a+b
+# 98 percent max
+
+
 def operation_multiply(a, b):
     return a*b
-def operation_stepen(a, b):
-    return a+b
+# 90 percent max
+
+
+def operation_square_length(a, b):
+    return a*a+b*b
+# 60 percent max
+
+
+def operation_surprise(a, b):
+    return a+b+a*b
+# 91 percent max
 
 
 def get_data(operation=operation_plus):
