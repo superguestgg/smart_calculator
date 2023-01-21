@@ -150,13 +150,18 @@ class Network(object):
         # предпоследний слой и так далее. это перенумерация
         # схема в книге, используемая здесь, чтобы воспользоваться этим фактом
         # что Python может использовать отрицательные индексы в списках.
-        for l in range(2, self.num_layers):
-            ## а это собственно самое главное, уменьшаем ошибку
-            z = zs[-l]
+        # последний комментарий устарел
+        for l in range(self.num_layers-1, 1, -1):
+            # перебираем l от предпоследнего слоя до 2го
+            z = zs[l-2]
             sp = sigmoid_prime(z)
-            delta = np.dot(self.weights[-l + 1].transpose(), delta) * sp
-            nabla_b[-l] = delta
-            nabla_w[-l] = np.dot(delta, activations[-l - 1].transpose())
+            delta = np.dot(self.weights[l+1-2].transpose(), delta) * sp
+            nabla_b[l-2] = delta
+            nabla_w[l-2] = np.dot(delta, activations[l-2].transpose())
+            #sp = sigmoid_prime(z)
+            #delta = np.dot(self.weights[-l + 1].transpose(), delta) * sp
+            #nabla_b[-l] = delta
+            #nabla_w[-l] = np.dot(delta, activations[-l - 1].transpose())
         return (nabla_b, nabla_w)
 
     def evaluate(self, test_data):
@@ -174,8 +179,8 @@ class Network(object):
         \partial a for the output activations."""
         """Вернуть вектор частных производных \partial C_x/
                  \partial a для выходных активаций."""
-        return (output_activations - y)**3
-        #return (output_activations - y)
+        #return (output_activations - y)**3
+        return (output_activations - y)
 """net = Network([2, 3, 1])
 print(net.biases)
 for b in net.biases:
