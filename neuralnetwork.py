@@ -1,14 +1,18 @@
-#
 import numpy as np
 import random
+
+
 def sigmoid(z):
     return (1/(1+np.exp(-z)))
+def my_sigmoid(z):
+    return (1/(1+np.exp(-z)))*2-1
 def sigmoid_prime(z):
     """Derivative of the sigmoid function."""
     #производная сигмоиды
     return sigmoid(z)*(1-sigmoid(z))
-class Network(object):
 
+
+class Network(object):
     def __init__(self, sizes):
         self.num_layers = len(sizes)
         self.sizes = sizes
@@ -17,11 +21,19 @@ class Network(object):
                         for x, y in zip(sizes[:-1], sizes[1:])]
 
 
+    def save(self, file_name):
+        file_to_save = open(file_name, "w")
+        file_to_save.write(self.biases)
+        file_to_save.write("\n\n")
+        file_to_save.write(self.weights)
+
+
     def feedforward(self, a):
         """Return the output of the network if "a" is input."""
         for b, w in zip(self.biases, self.weights):
             a = sigmoid(np.dot(w, a)+b)
         return a
+
     def SGD(self, training_data, epochs, mini_batch_size, eta,
             test_data=None):
         #данные для обучения, количество эпох, размер мини-пакета
@@ -66,6 +78,7 @@ class Network(object):
                     j, self.evaluate(test_data), n_test))
             else:
                 print("Epoch {0} complete".format(j))
+
     def update_mini_batch(self, mini_batch, eta):
         """Update the network's weights and biases by applying
         gradient descent using backpropagation to a single mini batch.
@@ -122,7 +135,7 @@ class Network(object):
         # backward pass
         delta = self.cost_derivative(activations[-1], y) * \
                 sigmoid_prime(zs[-1])
-        #считает ошибку
+        # считает ошибку
         nabla_b[-1] = delta
         nabla_w[-1] = np.dot(delta, activations[-2].transpose())
         # Note that the variable l in the loop below is used a little
@@ -161,7 +174,8 @@ class Network(object):
         \partial a for the output activations."""
         """Вернуть вектор частных производных \partial C_x/
                  \partial a для выходных активаций."""
-        return (output_activations - y)
+        return (output_activations - y)**3
+        #return (output_activations - y)
 """net = Network([2, 3, 1])
 print(net.biases)
 for b in net.biases:

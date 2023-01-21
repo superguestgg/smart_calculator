@@ -7,26 +7,37 @@ def get_ranges():
 
 def operation_plus(a, b):
     return a+b
-# 98 percent max
+# 98 / 100 correct max
+# 100 / 100 correct max if the cost function is (output_activations-y)**4
+# and so cost_derivative function is (output_activations - y)**3
 
 
 def operation_multiply(a, b):
     return a*b
 # 90 percent max
+# 100 / 100 correct max if the cost function is (output_activations-y)**4
+# and so cost_derivative function is (output_activations - y)**3
 
 
 def operation_square_length(a, b):
     return a*a+b*b
 # 60 percent max
+# 98 / 100 correct max if the cost function is (output_activations-y)**4
+# and so cost_derivative function is (output_activations - y)**3
 
 
 def operation_surprise(a, b):
     return a+b+a*b
 # 91 percent max
+# 100 / 100 correct max if the cost function is (output_activations-y)**4
+# and so cost_derivative function is (output_activations - y)**3
+
 
 def operation_string_a_b(a, b):
     return a*10+b
 # max percent 97
+# 100 / 100 correct max if the cost function is (output_activations-y)**4
+# and so cost_derivative function is (output_activations - y)**3
 
 
 def get_data(operation=operation_plus):
