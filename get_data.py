@@ -10,6 +10,8 @@ def operation_plus(a, b):
 # 98 / 100 correct max
 # 100 / 100 correct max if the cost function is (output_activations-y)**4
 # and so cost_derivative function is (output_activations - y)**3
+# 400 / 400
+# 1513 / 1600 after 500 epochs and 296.96875 seconds
 
 
 def operation_multiply(a, b):

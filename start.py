@@ -4,15 +4,16 @@ import get_data
 import numpy as np
 #training_data, validation_data, test_data = mnist_loader.load_data_wrapper()
 #training_data = list(training_data)
-user_net = False
-operation = get_data.operation_surprise
+user_net = True
+operation = get_data.operation_plus
 training_data, test_data = get_data.get_data(operation)
 
 import neuralnetwork as network
 
 if user_net:
-    net = network.Network([20, 20, 20, 20, 20])
-    net.SGD(training_data, 1000, 20, 8.0, test_data=test_data)
+    net = network.Network([20, 8, 20])
+    net.SGD(training_data, 2000, 20, 5.0, test_data=test_data)
+    net.save("net_linear.txt")
 elif operation is get_data.operation_string_a_b:
     net = network.Network([20, 110])
     net.SGD(training_data, 1000, 20, 8.0, test_data=test_data)
@@ -21,8 +22,8 @@ elif operation is get_data.operation_surprise:
     net.SGD(training_data, 1000, 20, 5.0, test_data=test_data)
 elif operation is get_data.operation_plus:
     # for plus
-    net = network.Network([20, 20, 20, 20, 20])
-    net.SGD(training_data, 500, 20, 5.0, test_data=test_data)
+    net = network.Network([20, 8, 20])
+    net.SGD(training_data, 2000, 20, 5.0, test_data=test_data)
 elif operation is get_data.operation_multiply:
     # for multiply
     net = network.Network([20, 20, 20, 100])
