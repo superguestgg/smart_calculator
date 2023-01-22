@@ -2,8 +2,14 @@ import time
 import mnist_loader
 import get_data
 import numpy as np
-#training_data, validation_data, test_data = mnist_loader.load_data_wrapper()
-#training_data = list(training_data)
+"""training_data, validation_data, test_data = mnist_loader.load_data_wrapper()
+training_data = list(training_data)
+test_data = list(test_data)
+
+import neuralnetwork as network
+
+net = network.Network([784, 100, 50, 10])
+net.SGD(training_data, 30, 20, 5.0, test_data=test_data)"""
 user_net = True
 operation = get_data.operation_plus
 training_data, test_data = get_data.get_data(operation)

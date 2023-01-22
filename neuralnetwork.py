@@ -74,8 +74,11 @@ class Network(object):
             for mini_batch in mini_batches:
                 self.update_mini_batch(mini_batch, eta)
             if test_data:
+                result_test = self.evaluate(test_data)
                 print("Epoch {0}: {1} / {2}".format(
-                    j, self.evaluate(test_data), n_test))
+                    j, result_test, n_test))
+                if result_test==n_test:
+                    break
             else:
                 print("Epoch {0} complete".format(j))
 
@@ -179,7 +182,8 @@ class Network(object):
         \partial a for the output activations."""
         """Вернуть вектор частных производных \partial C_x/
                  \partial a для выходных активаций."""
-        return (output_activations - y)**3
+        return -y/output_activations+(1-y)/(1-output_activations)
+        #return (output_activations - y)**3
         #return (output_activations - y)
 
 

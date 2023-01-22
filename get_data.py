@@ -7,12 +7,15 @@ def get_ranges():
 
 def operation_plus(a, b):
     return a+b
-# 98 / 100 correct max
+# 98 / 100 correct max if the cost function is (output_activations-y)**2
 # 100 / 100 correct max if the cost function is (output_activations-y)**4
-# and so cost_derivative function is (output_activations - y)**3
+# and so the cost_derivative function is (output_activations - y)**3
 # 400 / 400
 # 1513 / 1600 after 500 epochs and 296.96875 seconds
-
+# 1600 / 1600 after 155 epochs if the cost function is
+# -y*np.log(output_activations) - (1 - y) * np.log(1 - output_activations)
+# and so the cost_derivative function is -y/output_activations + (1 - y)/(1 - output_activations)
+# cross-entropy function above
 
 def operation_multiply(a, b):
     return a*b
