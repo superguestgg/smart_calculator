@@ -35,7 +35,15 @@ class Network(object):
         return a
 
     def SGD(self, training_data, epochs, mini_batch_size, eta,
-            test_data=None):
+            test_data=None, lmbda=0):
+        # lmbda - for regularization
+        # условно для объективизации обучения
+        # для уменьшения весов w
+        # условно недопускает чрезмерного роста весов, который может привести
+        # к тому что сеть будет учитывать шум или неточности и
+        # необъективности training_data (случайные совадения, не имеющие отношения к общему правилу,
+        # например для распознавания цифр на картинках, где определенный
+        # пиксель может в тестовых данных всегда означать, что результат напрмер 9
         #данные для обучения, количество эпох, размер мини-пакета
         """Train the neural network using mini-batch stochastic
         gradient descent.  The "training_data" is a list of tuples
@@ -72,17 +80,17 @@ class Network(object):
                 training_data[k:k+mini_batch_size]
                 for k in range(0, n, mini_batch_size)]
             for mini_batch in mini_batches:
-                self.update_mini_batch(mini_batch, eta)
+                self.update_mini_batch(mini_batch, eta, lmbda/(n/mini_batch_size))
             if test_data:
                 result_test = self.evaluate(test_data)
                 print("Epoch {0}: {1} / {2}".format(
                     j, result_test, n_test))
-                if result_test==n_test:
+                if result_test == n_test:
                     break
             else:
                 print("Epoch {0} complete".format(j))
 
-    def update_mini_batch(self, mini_batch, eta):
+    def update_mini_batch(self, mini_batch, eta, lmbda):
         """Update the network's weights and biases by applying
         gradient descent using backpropagation to a single mini batch.
         The "mini_batch" is a list of tuples "(x, y)", and "eta"
@@ -103,7 +111,7 @@ class Network(object):
             nabla_w = [nw+dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
             #print(nabla_w)
             ## просто добавляем изменение весов
-        self.weights = [w-(eta/len(mini_batch))*nw
+        self.weights = [(1-lmbda*eta)*w-(eta/len(mini_batch))*nw
                         for w, nw in zip(self.weights, nabla_w)]
         self.biases = [b-(eta/len(mini_batch))*nb
                        for b, nb in zip(self.biases, nabla_b)]

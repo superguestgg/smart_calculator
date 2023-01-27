@@ -16,6 +16,7 @@ def operation_plus(a, b):
 # -y*np.log(output_activations) - (1 - y) * np.log(1 - output_activations)
 # and so the cost_derivative function is -y/output_activations + (1 - y)/(1 - output_activations)
 # cross-entropy function above
+# функция перексрестной энтропии выше
 
 def operation_multiply(a, b):
     return a*b
