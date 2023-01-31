@@ -3,7 +3,6 @@ import numpy as np
 
 def get_digits(value, result_length=False):
     list_of_digits = []
-    value = value
     while value > 0:
         list_of_digits.append(value % 10)
         value //= 10
@@ -21,6 +20,25 @@ def get_digits(value, result_length=False):
 
 def get_count_digits(value):
     return len(get_digits(value))
+
+
+def digits_to_vector(digits_list, result_length, digits_list_2=False):
+    if digits_list_2:
+        list_vector = [[0] for _ in range(result_length)]
+        for digit_index in range(len(digits_list)):
+            digit = digits_list[digit_index]
+            list_vector[10 * digit_index + digit] = [1]
+        for digit_2_index in range(len(digits_list_2)):
+            digit_2 = digits_list_2[digit_2_index]
+            list_vector[len(digits_list) * 10 + 10 * digit_2_index + digit_2] = [1]
+
+        return list_vector
+    else:
+        list_vector = [[0] for _ in range(result_length)]
+        for i_digit_index in range(len(digits_list)):
+            i_digit = digits_list[i_digit_index]
+            list_vector[10 * i_digit_index + i_digit] = [1]
+        return list_vector
 
 
 class Ranges:
@@ -70,13 +88,7 @@ def get_data(operation, ranges):
         for j in range(range_j_big):
             j_list = get_digits(j, result_length=range_j)
 
-            one_part_data_input = [[0] for _ in range(range_i * 10 + range_j * 10)]
-            for i_digit_index in range(len(i_list)):
-                i_digit = i_list[i_digit_index]
-                one_part_data_input[10 * i_digit_index + i_digit] = [1]
-            for j_digit_index in range(len(j_list)):
-                j_digit = j_list[j_digit_index]
-                one_part_data_input[range_i * 10 + 10 * j_digit_index + j_digit] = [1]
+            one_part_data_input = digits_to_vector(i_list, range_i*10+range_j*10, j_list)
 
             this_result = operation(i, j)
             this_result_copy = this_result
@@ -92,8 +104,8 @@ def get_data(operation, ranges):
 
 
 def get_arrays_by_numbers(i, j, ranges):
-    range_i, range_j, notmatter = ranges.get_ranges()
-    one_part_data_input = [[0] for _ in range(10*range_i + 10*range_j)]
-    one_part_data_input[i] = [1]
-    one_part_data_input[j + range_i] = [1]
-    return one_part_data_input
+    range_i, range_j, notmatter = ranges.get_ranges_count()
+    list_i = get_digits(i, range_i)
+    list_j = get_digits(j, range_j)
+    result = digits_to_vector(list_i, 10*range_i + 10*range_j, list_j)
+    return result
