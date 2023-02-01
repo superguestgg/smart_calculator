@@ -39,8 +39,8 @@ class QuadraticCost(object):
         return (a-y) * sigmoid_prime(z)
 
 
-class FourthCost(object):
-
+class QuatroCost(object):
+    # fourth degree
     @staticmethod
     def fn(a, y):
         """Return the cost associated with an output ``a`` and desired output
@@ -96,7 +96,41 @@ class Network(object):
         self.num_layers = len(sizes)
         self.sizes = sizes
         self.default_weight_initializer()
-        self.cost=cost
+        self.cost = cost
+
+    def draw_input(self, expected_output):
+        y = expected_output
+        random_input = (np.random.randn(self.sizes[0], 1)) % 1
+        x = random_input
+        for iiii in range (1000):
+            # feedforward
+            activation = x
+            activations = [x] # list to store all the activations, layer by layer
+            zs = [] # list to store all the z vectors, layer by layer
+            for b, w in zip(self.biases, self.weights):
+                z = np.dot(w, activation)+b
+                zs.append(z)
+                activation = sigmoid(z)
+                activations.append(activation)
+            # backward pass
+            delta = (self.cost).delta(zs[-1], activations[-1], y)
+            #print(delta.shape)
+            for l in range(2, self.num_layers):
+                z = zs[-l]
+                sp = sigmoid_prime(z)
+                delta = np.dot(self.weights[-l+1].transpose(), delta) * sp
+                #print(delta.shape)
+
+            delta = np.dot(self.weights[0].transpose(), delta)
+            x-=delta
+            for x1_index in range (len(x)):
+                x1=x[x1_index]
+                for x2_index in range (len(x1)):
+                    x2 = min(max(x1[x2_index], 0), 1)
+                    x[x1_index][x2_index] = x2
+        print(self.feedforward(x))
+        return x
+
 
     def default_weight_initializer(self):
         """Initialize each weight using a Gaussian distribution with mean 0
@@ -170,7 +204,7 @@ class Network(object):
         """
 
         # early stopping functionality:
-        best_accuracy=1
+        best_accuracy = 1
 
         #training_data = list(training_data)
         n = len(training_data)
