@@ -15,7 +15,7 @@ if True:
         monitor_evaluation_accuracy=False, monitor_evaluation_cost=False,
         monitor_training_cost=True, monitor_training_accuracy=True)
     #net.draw_input(np.array([[0], [1], [0], [0], [0], [0], [0], [0], [0], [0]]))
-    draw.draw_by_pixels(net.draw_input(np.array([[0],[0],[1],[0],[0],[0],[0],[0],[0],[0]])))
+    draw.draw_by_pixels(net.draw_input(np.array([[0],[0],[0],[1],[0],[0],[0],[0],[0],[0]])))
 else:
     # не знаю зачем, но такой калькулятор складывает числа до 100 без ошибок
     # после 10 эпохи( в хорошем случае), в плохом после 20

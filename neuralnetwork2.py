@@ -126,7 +126,9 @@ class Network(object):
             for x1_index in range (len(x)):
                 x1=x[x1_index]
                 for x2_index in range (len(x1)):
-                    x2 = min(max(x1[x2_index], 0), 1)
+                    # умножение на 0.998(любой коэффициент меньший 1,нодостаточно большой,
+                    # чтобы на аннулировать значения) очищает картинку от шума
+                    x2 = min(max((x1[x2_index])*0.998, 0), 1)
                     x[x1_index][x2_index] = x2
         print(self.feedforward(x))
         return x

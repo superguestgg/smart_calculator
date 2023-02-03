@@ -6,7 +6,7 @@ def draw_by_pixels(np_array):
     for pixel in np_array:
         i = pixel[0]
         j += 1
-        thisline += "1"*(i>0.8)+" "*(i<=0.8)
+        thisline += "#"*(i>0.66)+" "*(i<0.33)+"="*(i<=0.66 and i>=0.33)
         if j >= 28:
             j = 0
             print(thisline)
