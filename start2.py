@@ -60,15 +60,20 @@ else:
     # (типо переобучения, условно запомнить все входы
     # и выходы для них и выдавать на них максимально правильный
     # результат), но при этом не факт что она будет давать
-    # правильные ответы на запросы, котрых не было раньше,
+    # правильные ответы на запросы, которых не было раньше,
     # ну и еще доказывает что обучать нейросеть с 1м выходом и 1м входом можно,
     # но как будто менее эффективно
+    # такая нейросеть не может выводить слищком большие значения
+    # (вероятнее всего изза того, что для большого значения z в последнем слое нужны большие веса,
+    # а они не получаются изза малого количества эпох, большого количества данных для обучения на маленьктх числах
+    # и перенасыщения нейронов
+
     training_data, test_data = get_data_2_2.get_data()
 
     net = network.Network([1, 80, 40, 1])
     net.SGD(training_data, 500, 20, 1.0, evaluation_data=test_data, lmbda=0.00,
         monitor_evaluation_accuracy=False, monitor_evaluation_cost=False,
-        monitor_training_cost=False, monitor_training_accuracy=False)
+        monitor_training_cost=True, monitor_training_accuracy=False)
     print(time.process_time())
     while True:
         z1 = float(input())
