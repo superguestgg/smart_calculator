@@ -98,11 +98,11 @@ class Network(object):
         self.default_weight_initializer()
         self.cost = cost
 
-    def draw_input(self, expected_output):
+    def get_input(self, expected_output):
         y = expected_output
         random_input = (np.random.randn(self.sizes[0], 1)) % 1
         x = random_input
-        for iiii in range (1000):
+        for not_matter_counter in range (1000):
             # feedforward
             activation = x
             activations = [x] # list to store all the activations, layer by layer
@@ -122,9 +122,9 @@ class Network(object):
                 #print(delta.shape)
 
             delta = np.dot(self.weights[0].transpose(), delta)
-            x-=delta
+            x -= delta
             for x1_index in range (len(x)):
-                x1=x[x1_index]
+                x1 = x[x1_index]
                 for x2_index in range (len(x1)):
                     # умножение на 0.998(любой коэффициент меньший 1,нодостаточно большой,
                     # чтобы на аннулировать значения) очищает картинку от шума
@@ -315,6 +315,8 @@ class Network(object):
             sp = sigmoid_prime(z)
             delta = np.dot(self.weights[-l+1].transpose(), delta) * sp
             nabla_b[-l] = delta
+            #print(delta)
+            #print(activations[-l-1])
             nabla_w[-l] = np.dot(delta, activations[-l-1].transpose())
         return (nabla_b, nabla_w)
 
@@ -398,7 +400,8 @@ def vectorized_result(j):
     into a corresponding desired output from the neural network.
 
     """
-    e = np.zeros((10, 1))
+    # e = np.zeros((10, 1))
+    e = np.zeros((3, 1))
     e[j] = 1.0
     return e
 

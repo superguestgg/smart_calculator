@@ -1,4 +1,5 @@
 import draw
+import shape_open_json
 import time
 import mnist_loader
 import get_data_2
@@ -51,7 +52,7 @@ elif False:
             else:
                 result_str = "0" + result_str
         print(result_str)
-else:
+elif False:
     # my example for 4 chapter of book
     # compute the uno_fuction, forexample x**2,
     # using anti-sigmoid(y) (y = result) as answer
@@ -86,3 +87,23 @@ else:
         result_str = str(result)
         print(get_data_2_2.anti_sigmoid(get_data_2_2.sigmoid(z1**2)))
         print(result_str)
+else:
+    # а теперь по этому примеру:
+    # есть 3 файла: [2(72 обычных примера),
+    # 3 (94 расширенных примера( попадается больше различных вариантов),
+    # 4 (50 обычных примеров)]
+    # обучение 3->2, 3->5 : 100% correct,
+    # 2->3 60% correct max(58/94) (lambda=4.25, eta=0.5),
+    # 2->5 100% correct(lmbda=0.25, eta=0.5, after 5 epochs)
+    # 5->2 100%, 5->3 60% correct max (lambda=4.125, eta=0.5),
+    # 2->2, 5->5 100% after 9 examples, low lambda,
+    # потому что здесь примеры с одинаковыми ответами очень похожи
+    # 3->3 50-54/94 after 9 examples,
+    training_data = shape_open_json.open_json()
+    test_data = shape_open_json.open_json_test_data()
+
+    net = network.Network([784, 80, 40, 3])
+    net.SGD(training_data[:10], 5000, 10, 0.05, evaluation_data=test_data, lmbda=0.125,
+        monitor_evaluation_accuracy=True, monitor_evaluation_cost=True,
+        monitor_training_cost=False, monitor_training_accuracy=False)
+    print(time.process_time())
