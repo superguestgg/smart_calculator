@@ -7,7 +7,11 @@ import get_data_2_2
 import numpy as np
 import neuralnetwork2 as network
 
-if False:
+using_types = ['mnist_digits', 'calculator_digits',
+               'unary_function', 'geometric_figures']
+using_type = using_types[3]
+
+if using_type == 'mnist_digits':
     training_data, validation_data, test_data = mnist_loader.load_data_wrapper()
     training_data = list(training_data)
     test_data = list(test_data)
@@ -20,7 +24,7 @@ if False:
     a_s = 0 # activation standard (for not activated neurons)
     a_a = 1 # activation for activated neurons
     draw.draw_by_pixels(net.get_input(np.array([[a_s], [a_s], [a_s], [a_s], [a_s], [a_s], [a_s], [a_a], [a_s], [a_s]])))
-elif False:
+elif using_type == 'calculator_digits':
     # не знаю зачем, но такой калькулятор складывает числа до 100 без ошибок
     # после 10 эпохи( в хорошем случае), в плохом после 20
     # а потом я понял что это х...,(генерация рандомов не работала на бошльших числах (до 1000)
@@ -52,7 +56,7 @@ elif False:
             else:
                 result_str = "0" + result_str
         print(result_str)
-elif False:
+elif using_type == 'unary_function':
     # my example for 4 chapter of book
     # compute the uno_fuction, forexample x**2,
     # using anti-sigmoid(y) (y = result) as answer
@@ -87,7 +91,7 @@ elif False:
         result_str = str(result)
         print(get_data_2_2.anti_sigmoid(get_data_2_2.sigmoid(z1**2)))
         print(result_str)
-else:
+elif using_type == 'geometric_figures':
     # а теперь по этому примеру:
     # есть 3 файла: [2(72 обычных примера),
     # 3 (94 расширенных примера( попадается больше различных вариантов),
@@ -102,8 +106,8 @@ else:
     training_data = shape_open_json.open_json()
     test_data = shape_open_json.open_json_test_data()
 
-    net = network.Network([784, 80, 40, 3])
-    net.SGD(training_data[:10], 5000, 10, 0.05, evaluation_data=test_data, lmbda=0.125,
+    net = network.Network([784, 80, 3])
+    net.SGD(training_data[:50], 500, 10, 1.0, evaluation_data=test_data, lmbda=0.00125,
         monitor_evaluation_accuracy=True, monitor_evaluation_cost=True,
         monitor_training_cost=False, monitor_training_accuracy=False)
     print(time.process_time())
