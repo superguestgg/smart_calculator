@@ -281,16 +281,25 @@ class Network(object):
         ``n`` is the total size of the training data set.
 
         """
-        nabla_b = [np.zeros(b.shape) for b in self.biases]
-        nabla_w = [np.zeros(w.shape) for w in self.weights]
+        nabla_b = [np.zeros(layer.b.shape) for layer in self.layers]
+        nabla_w = [np.zeros(layer.w.shape) for layer in self.layers]
+        i=0
         for x, y in mini_batch:
+            #print(i)
+            i+=1
             delta_nabla_b, delta_nabla_w = self.backprop(x, y)
             nabla_b = [nb+dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
             nabla_w = [nw+dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
-        self.weights = [(1-eta*(lmbda/n))*w-(eta/len(mini_batch))*nw
-                        for w, nw in zip(self.weights, nabla_w)]
-        self.biases = [b-(eta/len(mini_batch))*nb
-                       for b, nb in zip(self.biases, nabla_b)]
+
+        for nabla_layer_w, nabla_layer_b, layer in zip(nabla_w, nabla_b, self.layers):
+            #print("mini_batch_ending")
+            #print(nabla_layer_w.shape)
+            #print(layer.w.shape)
+            layer.w = (1-eta*(lmbda/n))*layer.w-(eta/len(mini_batch))*nabla_layer_w
+            #print(layer.w.shape)
+            #print(layer.b.shape)
+            layer.b = layer.b - (eta / len(mini_batch)) * nabla_layer_b
+            #print(layer.b.shape)
 
     def backprop(self, x, y):
         """Return a tuple ``(nabla_b, nabla_w)`` representing the
@@ -298,12 +307,13 @@ class Network(object):
         ``nabla_w`` are layer-by-layer lists of numpy arrays, similar
         to ``self.biases`` and ``self.weights``."""
         nabla_w = [[] for _ in range (len(self.layers))]
-        nabla_b = [[] for _ in range(len(self.layers))]
+        nabla_b = [[] for _ in range (len(self.layers))]
         # feedforward
         activation = x
         activations = [x] # list to store all the activations, layer by layer
         zs = [] # list to store all the z vectors, layer by layer
         for layer in self.layers:
+            #print(layer.n_in)
             z, activation = layer.feedforward(activation)
             zs.append(z)
             activations.append(activation)
@@ -319,6 +329,8 @@ class Network(object):
         # that Python can use negative indices in lists.
         for l in range(1, self.num_layers):
             layer = self.layers[-l]
+            #print("b")
+            #print(layer.n_in)
             z = zs[-l]
             delta_a, this_nabla_b, this_nabla_w = layer.get_delta(delta_a, z, activations[-l-1])
             nabla_b[-l] = this_nabla_b
@@ -368,7 +380,7 @@ class Network(object):
         cost = 0.0
         for x, y in data:
             a = self.feedforward(x)
-            if convert: y = vectorized_result(y)
+            if convert: y = vectorized_result(y, 10)
             cost += self.cost.fn(a, y)/len(data)
             cost += 0.5*(lmbda/len(data))*sum(np.linalg.norm(w)**2 for w in self.weights) # '**' - to the power of.
         return cost
@@ -386,7 +398,7 @@ class Network(object):
 
 #### Define layer types
 '''
-later
+# later
 class ConvPoolLayer(object):
     """Used to create a combination of a convolutional and a max-pooling
     layer.  A more sophisticated implementation would separate the
@@ -397,18 +409,6 @@ class ConvPoolLayer(object):
 
     def __init__(self, filter_shape, image_shape, poolsize=(2, 2),
                  activation=SigmoidActivation):
-        """`filter_shape` is a tuple of length 4, whose entries are the number
-        of filters, the number of input feature maps, the filter height, and the
-        filter width.
-
-        `image_shape` is a tuple of length 4, whose entries are the
-        mini-batch size, the number of input feature maps, the image
-        height, and the image width.
-
-        `poolsize` is a tuple of length 2, whose entries are the y and
-        x pooling sizes.
-
-        """
         self.filter_shape = filter_shape
         self.image_shape = image_shape
         self.poolsize = poolsize
@@ -416,11 +416,12 @@ class ConvPoolLayer(object):
         # initialize weights and biases
         n_out = (filter_shape[0]*np.prod(filter_shape[2:])/np.prod(poolsize))
         self.w = np.random.normal(loc=0, scale=np.sqrt(1.0/n_out), size=filter_shape)
-        self.b = np.random.normal(loc=0, scale=1.0, size=(filter_shape[0],))
+        self.b = np.random.normal(loc=0, scale=1.0, size=(filter_shape[0],1))
         self.params = [self.w, self.b]
 
     def feedforward(self, inpt):
         self.inpt = inpt.reshape(self.image_shape)
+        conv_out = convolute(self.inpt, self.w, self.b,)
         conv_out = conv.conv2d(
             input=self.inpt, filters=self.w, filter_shape=self.filter_shape,
             image_shape=self.image_shape)
@@ -439,14 +440,18 @@ class FullyConnectedLayer(object):
         self.activation = activation
         # self.p_dropout = p_dropout
         # Initialize weights and biases
-        self.w = np.random.normal(loc=0.0, scale=np.sqrt(1.0/n_out), size=(n_in, n_out))
+        self.w = np.random.normal(loc=0.0, scale=np.sqrt(1.0/n_out), size=(n_out, n_in))
 
         self.b = np.random.normal(loc=0.0, scale=1.0, size=(n_out, 1))
 
         self.params = [self.w, self.b]
 
     def feedforward(self, inpt):
-        z_vector = np.dot(self.w, inpt) + self.b
+        #print(self.w.shape)
+        #print(self.b.shape)
+        #print(inpt.shape)
+        z_vector = np.dot(self.w, inpt)
+        z_vector = z_vector + self.b
         a_vector = self.activation.fn(z_vector)
         return [z_vector, a_vector]
 
@@ -455,9 +460,15 @@ class FullyConnectedLayer(object):
         # производная сигмоиды в точках вектора z
         z_vector_delta = a_vector_delta * z_vector_prime
         # поэлементное умножение
+        #print("_")
+        #print(a_vector_delta.shape)
+        #print(z_vector_prime.shape)
+        #print(z_vector_delta.shape)
         previous_a_vector_delta = np.dot(self.w.transpose(), z_vector_delta)
         w_delta = np.dot(z_vector_delta, previous_a_vector.transpose())
         b_delta = z_vector_delta
+        #print(previous_a_vector_delta.shape)
+        #print(w_delta.shape)
         return [previous_a_vector_delta, b_delta, w_delta]
 
     def accuracy(self, y):
@@ -492,7 +503,9 @@ class WeightInitializer:
     @staticmethod
     def default_weight_initializer(array_shape, scale):
         weights = np.random.normal(loc=0.0, scale=scale, size=array_shape)
+        return weights
 
     @staticmethod
     def large_weight_initializer(array_shape):
         weights = np.random.normal(loc=0.0, scale=1.0, size=array_shape)
+        return weights
