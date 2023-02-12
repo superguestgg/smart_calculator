@@ -285,21 +285,14 @@ class Network(object):
         nabla_w = [np.zeros(layer.w.shape) for layer in self.layers]
         i=0
         for x, y in mini_batch:
-            #print(i)
             i+=1
             delta_nabla_b, delta_nabla_w = self.backprop(x, y)
             nabla_b = [nb+dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
             nabla_w = [nw+dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
 
         for nabla_layer_w, nabla_layer_b, layer in zip(nabla_w, nabla_b, self.layers):
-            #print("mini_batch_ending")
-            #print(nabla_layer_w.shape)
-            #print(layer.w.shape)
             layer.w = (1-eta*(lmbda/n))*layer.w-(eta/len(mini_batch))*nabla_layer_w
-            #print(layer.w.shape)
-            #print(layer.b.shape)
             layer.b = layer.b - (eta / len(mini_batch)) * nabla_layer_b
-            #print(layer.b.shape)
 
     def backprop(self, x, y):
         """Return a tuple ``(nabla_b, nabla_w)`` representing the
@@ -313,14 +306,11 @@ class Network(object):
         activations = [x] # list to store all the activations, layer by layer
         zs = [] # list to store all the z vectors, layer by layer
         for layer in self.layers:
-            #print(layer.n_in)
             z, activation = layer.feedforward(activation)
             zs.append(z)
             activations.append(activation)
         # backward pass
         delta_a = (self.cost).delta_a(zs[-1], activations[-1], y)
-        #nabla_b[-1] = delta
-        #nabla_w[-1] = np.dot(delta, activations[-2].transpose())
         # Note that the variable l in the loop below is used a little
         # differently to the notation in Chapter 2 of the book.  Here,
         # l = 1 means the last layer of neurons, l = 2 is the
@@ -397,7 +387,7 @@ class Network(object):
 
 
 #### Define layer types
-'''
+
 # later
 class ConvPoolLayer(object):
     """Used to create a combination of a convolutional and a max-pooling
@@ -412,25 +402,25 @@ class ConvPoolLayer(object):
         self.filter_shape = filter_shape
         self.image_shape = image_shape
         self.poolsize = poolsize
-        self.activation_fn=activation
+        self.activation = activation
         # initialize weights and biases
         n_out = (filter_shape[0]*np.prod(filter_shape[2:])/np.prod(poolsize))
         self.w = np.random.normal(loc=0, scale=np.sqrt(1.0/n_out), size=filter_shape)
-        self.b = np.random.normal(loc=0, scale=1.0, size=(filter_shape[0],1))
+        self.b = np.random.normal(loc=0, scale=1.0, size=(filter_shape[0]))
         self.params = [self.w, self.b]
 
     def feedforward(self, inpt):
         self.inpt = inpt.reshape(self.image_shape)
-        conv_out = convolute(self.inpt, self.w, self.b,)
-        conv_out = conv.conv2d(
-            input=self.inpt, filters=self.w, filter_shape=self.filter_shape,
-            image_shape=self.image_shape)
-        pooled_out = pool_2d(
-            input=conv_out, ws=self.poolsize, ignore_border=True)
-        self.output = self.activation_fn(
-            pooled_out + self.b.dimshuffle('x', 0, 'x', 'x'))
-        self.output_dropout = self.output # no dropout in the convolutional layers
-'''
+        conv_out = convolute_2d(self.inpt, self.filter_shape, self.w)
+        pooled_out = pool_2d(conv_out, self.poolsize, ignore_border=True)
+        #conv_out = conv.conv2d(
+        #    input=self.inpt, filters=self.w, filter_shape=self.filter_shape,
+        #    image_shape=self.image_shape)
+        #pooled_out = pool_2d(
+        #    input=conv_out, ws=self.poolsize, ignore_border=True)
+        output = self.activation.fn(
+            pooled_out + dimshuffle(self.b, pooled_out.shape[1:]))
+        return output
 
 class FullyConnectedLayer(object):
 
@@ -447,9 +437,6 @@ class FullyConnectedLayer(object):
         self.params = [self.w, self.b]
 
     def feedforward(self, inpt):
-        #print(self.w.shape)
-        #print(self.b.shape)
-        #print(inpt.shape)
         z_vector = np.dot(self.w, inpt)
         z_vector = z_vector + self.b
         a_vector = self.activation.fn(z_vector)
@@ -460,15 +447,9 @@ class FullyConnectedLayer(object):
         # производная сигмоиды в точках вектора z
         z_vector_delta = a_vector_delta * z_vector_prime
         # поэлементное умножение
-        #print("_")
-        #print(a_vector_delta.shape)
-        #print(z_vector_prime.shape)
-        #print(z_vector_delta.shape)
         previous_a_vector_delta = np.dot(self.w.transpose(), z_vector_delta)
         w_delta = np.dot(z_vector_delta, previous_a_vector.transpose())
         b_delta = z_vector_delta
-        #print(previous_a_vector_delta.shape)
-        #print(w_delta.shape)
         return [previous_a_vector_delta, b_delta, w_delta]
 
     def accuracy(self, y):
@@ -509,3 +490,46 @@ class WeightInitializer:
     def large_weight_initializer(array_shape):
         weights = np.random.normal(loc=0.0, scale=1.0, size=array_shape)
         return weights
+
+def dimshuffle(biases, add_shape):
+    result = np.array((biases.shape[0],add_shape[0],add_shape[1]))
+    for i in range (len(biases)):
+        b = biases[i]
+        result[i] = np.full(add_shape,b)
+    return result
+
+
+def pool_2d(image, pool_size, ignore_border=True):
+    # image is a 3 dimensional: image_layers_count, x, y
+    image_shape = image.shape
+    pooled_image = np.zeros((image_shape[0],
+                            image_shape[1]//pool_size[0],
+                            image_shape[2]//pool_size[1]))
+    for image_layer_index in range (image_shape[0]):
+        for i in range (image_shape[1]//pool_size[0]):
+            for j in range(image_shape[2]//pool_size[1]):
+                result = np.zeros(pool_size)
+                for ii in range (pool_size[0]):
+                    for jj in range (pool_size[1]):
+                        result[ii][jj] = image[image_layer_index][i*pool_size[0]+ii][j*pool_size[1]+jj]
+                pooled_image[image_layer_index,i,j] = np.max(result)
+    return pooled_image
+#print(pool_2d(np.array([[[9,0,0,0],[1,1,1,1],[2,2,3,3],[2,2,3,7]]]), (2,2)))
+
+
+def convolute_2d(image, filter_shape, weights):
+    # image is a 3 dimensional: image_layers_count, x, y
+    # convoluted_image is a 3 dimensional: image_out_layers_count, x, y
+    # weights.shape === filter_shape
+    image_shape = image.shape
+    convoluted_image = np.zeros((filter_shape[0],
+                            image_shape[1]-filter_shape[2]+1,
+                            image_shape[2]-filter_shape[3]+1))
+    for convoluted_image_layer_index in range (filter_shape[0]):
+        for i in range (convoluted_image.shape[1]):
+            for j in range (convoluted_image.shape[2]):
+                result = image[:][i:i+filter_shape[2]][j:j+filter_shape[3]]
+                print(result.shape)
+                convoluted_image[convoluted_image_layer_index][i][j]\
+                    = np.sum(result*weights[convoluted_image_layer_index])
+    return convoluted_image
