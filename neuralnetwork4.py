@@ -402,6 +402,9 @@ class ConvPoolLayer(object):
         self.filter_shape = filter_shape
         self.image_shape = image_shape
         self.poolsize = poolsize
+        self.result_shape = (self.filter_shape[0],
+                             (self.image_shape[1]-self.filter_shape[1]+1)/self.poolsize[0],
+                             (self.image_shape[2]-self.filter_shape[2]+1)/self.poolsize[1])
         self.activation = activation
         # initialize weights and biases
         n_out = (filter_shape[0]*np.prod(filter_shape[2:])/np.prod(poolsize))
@@ -410,8 +413,8 @@ class ConvPoolLayer(object):
         self.params = [self.w, self.b]
 
     def feedforward(self, inpt):
-        self.inpt = inpt.reshape(self.image_shape)
-        conv_out = convolute_2d(self.inpt, self.filter_shape, self.w)
+        inpt = inpt.reshape(self.image_shape)
+        conv_out = convolute_2d(inpt, self.filter_shape, self.w)
         pooled_out = pool_2d(conv_out, self.poolsize, ignore_border=True)
         #conv_out = conv.conv2d(
         #    input=self.inpt, filters=self.w, filter_shape=self.filter_shape,
@@ -420,7 +423,27 @@ class ConvPoolLayer(object):
         #    input=conv_out, ws=self.poolsize, ignore_border=True)
         output = self.activation.fn(
             pooled_out + dimshuffle(self.b, pooled_out.shape[1:]))
-        return output
+        return output.reshape(np.prod(self.result_shape))
+
+    def get_delta(self, a_vector_delta, z_vector, previous_a_vector):
+        # reshaping from 1dim vectors
+        z_vector = z_vector.reshape(self.result_shape) #3dimension: output_layers_count, x, y
+        a_vector_delta = a_vector_delta.reshape(self.result_shape) #3dimension: output_layers_count, x, y
+        previous_a_vector = previous_a_vector.reshape(self.image_shape)  #3dimension: input_layers_count, x, y
+
+        z_pool_vector_prime = self.activation.derivative(z_vector)
+        # производная сигмоиды в точках вектора z
+        z_pool_vector_delta = a_vector_delta * z_pool_vector_prime
+        # поэлементное умножение
+        nabla_b_before = z_pool_vector_delta
+        nabla_b = [np.sum(layer_nabla_b)/np.prod(layer_nabla_b.shape)
+                   for layer_nabla_b in nabla_b_before]
+        z_conv_vector_delta = anti_pool_2d(z_pool_vector_delta, self.poolsize)
+        nabla_w = get_weights_convlayer_derivative(previous_a_vector, z_conv_vector_delta, self.filter_shape)
+        previous_a_vector = backpropagate_derivatives_conv_layer(self.weights, z_conv_vector_delta, self.filter_shape)
+
+
+
 
 class FullyConnectedLayer(object):
 
@@ -514,7 +537,22 @@ def pool_2d(image, pool_size, ignore_border=True):
                         result[ii][jj] = image[image_layer_index][i*pool_size[0]+ii][j*pool_size[1]+jj]
                 pooled_image[image_layer_index,i,j] = np.max(result)
     return pooled_image
+
+def anti_pool_2d(image, pool_size, ignore_border=True):
+    # image is a 3 dimensional: image_layers_count, x, y
+    image_shape = image.shape
+    anti_pooled_image = np.zeros((image_shape[0],
+                            image_shape[1]*pool_size[0],
+                            image_shape[2]*pool_size[1]))
+    for image_layer_index in range (image_shape[0]):
+        for i in range (image_shape[1]):
+            for j in range(image_shape[2]):
+                for ii in range (pool_size[0]):
+                    for jj in range (pool_size[1]):
+                        anti_pooled_image[image_layer_index][i*pool_size[0]+ii][j*pool_size[1]+jj] = image[image_layer_index][i][j]
+    return anti_pooled_image
 #print(pool_2d(np.array([[[9,0,0,0],[1,1,1,1],[2,2,3,3],[2,2,3,7]]]), (2,2)))
+#print(anti_pool_2d(pool_2d(np.array([[[9,0,0,0],[1,1,1,1],[2,2,3,3],[2,2,3,7]]]), (2,2)), (2,2)))
 
 
 def convolute_2d(image, filter_shape, weights):
@@ -529,7 +567,44 @@ def convolute_2d(image, filter_shape, weights):
         for i in range (convoluted_image.shape[1]):
             for j in range (convoluted_image.shape[2]):
                 result = image[:][i:i+filter_shape[2]][j:j+filter_shape[3]]
+                print(i+filter_shape[2])
                 print(result.shape)
                 convoluted_image[convoluted_image_layer_index][i][j]\
                     = np.sum(result*weights[convoluted_image_layer_index])
     return convoluted_image
+
+def get_weights_convlayer_derivative(previous_a_vector, z_conv_vector_delta, weights_shape):
+    previous_a_vector_shape = previous_a_vector.shape
+    z_conv_vector_delta_shape = z_conv_vector_delta.shape
+    weights = np.zeros(weights_shape)
+    for output_layer_index in weights_shape[0]:
+        for input_layer_index in weights_shape[1]:
+            for y in range (weights_shape[2]):
+                for x in range(weights_shape[3]):
+                    weights[output_layer_index][input_layer_index][y][x]\
+                        = np.sum(previous_a_vector[input_layer_index][y:y+z_conv_vector_delta_shape[1]][x:x+z_conv_vector_delta_shape[2]]\
+                        * z_conv_vector_delta[output_layer_index])
+
+def backpropagate_derivatives_conv_layer(weights, z_conv_vector_delta, filter_shape):
+    # z_conv_vector_delta is a 3 dimensional: image_layers_count, x, y
+    # convoluted_image is a 3 dimensional: image_out_layers_count, x, y
+    # weights.shape === filter_shape
+    output_image_shape = z_conv_vector_delta.shape
+    #unconvoluted_image_delta = np.zeros((filter_shape[1],
+    #                        output_image_shape[1]+filter_shape[2]-1,
+    #                        output_image_shape[2]+filter_shape[3]-1))
+    transposed_weights = np.zeros((filter_shape[1],filter_shape[0],
+                                   filter_shape[3],filter_shape[2]))
+    for input_image_layer_index in range (filter_shape[1]):
+        for output_image_layer_index in range (filter_shape[0]):
+            transposed_weights[input_image_layer_index][output_image_layer_index]\
+                = weights[output_image_layer_index][input_image_layer_index][::-1][::-1]
+    return convolute_2d(z_conv_vector_delta, filter_shape, transposed_weights)
+    #    for i in range (convoluted_image.shape[1]):
+    #        for j in range (convoluted_image.shape[2]):
+    #            result = image[:][i:i+filter_shape[2]][j:j+filter_shape[3]]
+    #            print(result.shape)
+    #            convoluted_image[convoluted_image_layer_index][i][j]\
+    #                = np.sum(result*weights[convoluted_image_layer_index])
+    #return convoluted_image
+
