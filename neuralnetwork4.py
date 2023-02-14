@@ -283,7 +283,8 @@ class Network(object):
         """
         nabla_b = [np.zeros(layer.b.shape) for layer in self.layers]
         nabla_w = [np.zeros(layer.w.shape) for layer in self.layers]
-        i=0
+        i = 0
+        print("new mini batch")
         for x, y in mini_batch:
             i+=1
             delta_nabla_b, delta_nabla_w = self.backprop(x, y)
@@ -291,6 +292,8 @@ class Network(object):
             nabla_w = [nw+dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
 
         for nabla_layer_w, nabla_layer_b, layer in zip(nabla_w, nabla_b, self.layers):
+            print(np.sum(nabla_layer_w) / np.prod(nabla_layer_w.shape))
+            print(np.sum(nabla_layer_b) / np.prod(nabla_layer_b.shape))
             layer.w = (1-eta*(lmbda/n))*layer.w-(eta/len(mini_batch))*nabla_layer_w
             layer.b = layer.b - (eta / len(mini_batch)) * nabla_layer_b
 
@@ -306,6 +309,7 @@ class Network(object):
         activations = [x] # list to store all the activations, layer by layer
         zs = [] # list to store all the z vectors, layer by layer
         for layer in self.layers:
+            #print("feedforward next layer")
             z, activation = layer.feedforward(activation)
             zs.append(z)
             activations.append(activation)
@@ -316,9 +320,10 @@ class Network(object):
         # l = 1 means the last layer of neurons, l = 2 is the
         # second-last layer, and so on.  It's a renumbering of the
         # scheme in the book, used here to take advantage of the fact
+        #print("feedforward end")
         # that Python can use negative indices in lists.
         for l in range(1, self.num_layers):
-            print(l)
+            #print(l)
             layer = self.layers[-l]
             #print("b")
             #print(layer.n_in)
@@ -326,6 +331,7 @@ class Network(object):
             delta_a, this_nabla_b, this_nabla_w = layer.get_delta(delta_a, z, activations[-l-1])
             nabla_b[-l] = this_nabla_b
             nabla_w[-l] = this_nabla_w
+            #print(this_nabla_w.shape)
         return (nabla_b, nabla_w)
 
     def accuracy(self, data, convert=False):
@@ -446,11 +452,13 @@ class ConvPoolLayer(object):
                    for layer_nabla_b in nabla_b_before]
         z_conv_vector_delta = anti_pool_2d(z_pool_vector_delta, self.poolsize)
         w_delta = get_weights_convlayer_derivative(previous_a_vector, z_conv_vector_delta, self.filter_shape)
+        #print(self.w.shape)
+        #print(w_delta.shape)
         previous_a_vector_delta = backpropagate_derivatives_conv_layer(self.w, z_conv_vector_delta, self.filter_shape)
         #print(z_conv_vector_delta.shape)
         #print(previous_a_vector_delta.shape)
         #print(previous_a_vector.shape)
-        return [previous_a_vector_delta, b_delta, w_delta]
+        return [previous_a_vector_delta, np.array(b_delta)/100, np.array(w_delta)/100]
 
 
 
@@ -602,18 +610,20 @@ def wide_convolute_2d(image, filter_shape, weights):
     convoluted_image = np.zeros((filter_shape[0],
                             image_shape[1]+filter_shape[2]-1,
                             image_shape[2]+filter_shape[3]-1))
+    #print(convoluted_image.shape)
     for convoluted_image_layer_index in range (filter_shape[0]):
         for i in range (convoluted_image.shape[1]):
             for j in range (convoluted_image.shape[2]):
                 #result = image[:][i:i+filter_shape[2]][j:j+filter_shape[3]]
-                print(i-filter_shape[2]+1)
-                print(j-filter_shape[3]+1)
+                #print(i-filter_shape[2]+1)
+                #print(j-filter_shape[3]+1)
                 conv_for = \
-                    np.array([[[(image[kk][i-filter_shape[2]+1+ii][j-filter_shape[3]+1+jj]
-                                 *(i-filter_shape[2]+1+ii > 0 and j-filter_shape[3]+1+jj > 0))
+                    np.array([[[(0 if not (image_shape[1]>i-filter_shape[2]+1+ii >= 0 and image_shape[2]>j-filter_shape[3]+1+jj >= 0)
+                    else image[kk][i-filter_shape[2]+1+ii][j-filter_shape[3]+1+jj])
                                      for jj in range (filter_shape[3])]
                                     for ii in range (filter_shape[2])]
                                    for kk in range (image.shape[0])])
+                # то что выше переписать на if-else 613 и 614 строку
                 #print(i+filter_shape[2])
                 #print(result.shape)
                 #print(result)
@@ -637,6 +647,7 @@ def get_weights_convlayer_derivative(previous_a_vector, z_conv_vector_delta, wei
                     weights[output_layer_index][input_layer_index][y][x]\
                         = np.sum([[previous_a_vector[input_layer_index][y+yy][x+xx] for xx in range (z_conv_vector_delta_shape[2])] for yy in range (z_conv_vector_delta_shape[1])]\
                         * z_conv_vector_delta[output_layer_index])
+    return weights
 
 def backpropagate_derivatives_conv_layer(weights, z_conv_vector_delta, filter_shape):
     # z_conv_vector_delta is a 3 dimensional: image_layers_count, x, y
@@ -653,9 +664,10 @@ def backpropagate_derivatives_conv_layer(weights, z_conv_vector_delta, filter_sh
             #transposed_weights[input_image_layer_index][output_image_layer_index]\
             #    = weights[output_image_layer_index][input_image_layer_index][::-1][::-1]
             transposed_weights[input_image_layer_index][output_image_layer_index] \
-                = weights[output_image_layer_index][input_image_layer_index][::-1].transpose()[::-1]
+                = weights[output_image_layer_index][input_image_layer_index]\
+            [::-1].transpose()[::-1].transpose()
     #print(transposed_weights.shape)
-    print(wide_convolute_2d(z_conv_vector_delta, transposed_weights.shape, transposed_weights).shape)
+    #print(wide_convolute_2d(z_conv_vector_delta, transposed_weights.shape, transposed_weights).shape)
     return wide_convolute_2d(z_conv_vector_delta, transposed_weights.shape, transposed_weights)
     #    for i in range (convoluted_image.shape[1]):
     #        for j in range (convoluted_image.shape[2]):
