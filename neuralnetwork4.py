@@ -318,6 +318,7 @@ class Network(object):
         # scheme in the book, used here to take advantage of the fact
         # that Python can use negative indices in lists.
         for l in range(1, self.num_layers):
+            print(l)
             layer = self.layers[-l]
             #print("b")
             #print(layer.n_in)
@@ -403,8 +404,8 @@ class ConvPoolLayer(object):
         self.image_shape = image_shape
         self.poolsize = poolsize
         self.result_shape = (self.filter_shape[0],
-                             (self.image_shape[1]-self.filter_shape[1]+1)/self.poolsize[0],
-                             (self.image_shape[2]-self.filter_shape[2]+1)/self.poolsize[1])
+                             (self.image_shape[1]-self.filter_shape[2]+1)//self.poolsize[0],
+                             (self.image_shape[2]-self.filter_shape[3]+1)//self.poolsize[1])
         self.activation = activation
         # initialize weights and biases
         n_out = (filter_shape[0]*np.prod(filter_shape[2:])/np.prod(poolsize))
@@ -421,9 +422,14 @@ class ConvPoolLayer(object):
         #    image_shape=self.image_shape)
         #pooled_out = pool_2d(
         #    input=conv_out, ws=self.poolsize, ignore_border=True)
-        output = self.activation.fn(
+        #print(self.result_shape)
+        #print(pooled_out.shape)
+        #print(dimshuffle(self.b, pooled_out.shape[1:]).shape)
+        output_z = self.activation.fn(
             pooled_out + dimshuffle(self.b, pooled_out.shape[1:]))
-        return output.reshape(np.prod(self.result_shape))
+        output_a = self.activation.fn(output_z)
+        return output_z.reshape(int(np.prod(self.result_shape)),1),\
+               output_a.reshape(int(np.prod(self.result_shape)),1)
 
     def get_delta(self, a_vector_delta, z_vector, previous_a_vector):
         # reshaping from 1dim vectors
@@ -436,12 +442,15 @@ class ConvPoolLayer(object):
         z_pool_vector_delta = a_vector_delta * z_pool_vector_prime
         # поэлементное умножение
         nabla_b_before = z_pool_vector_delta
-        nabla_b = [np.sum(layer_nabla_b)/np.prod(layer_nabla_b.shape)
+        b_delta = [np.sum(layer_nabla_b)/np.prod(layer_nabla_b.shape)
                    for layer_nabla_b in nabla_b_before]
         z_conv_vector_delta = anti_pool_2d(z_pool_vector_delta, self.poolsize)
-        nabla_w = get_weights_convlayer_derivative(previous_a_vector, z_conv_vector_delta, self.filter_shape)
-        previous_a_vector = backpropagate_derivatives_conv_layer(self.weights, z_conv_vector_delta, self.filter_shape)
-
+        w_delta = get_weights_convlayer_derivative(previous_a_vector, z_conv_vector_delta, self.filter_shape)
+        previous_a_vector_delta = backpropagate_derivatives_conv_layer(self.w, z_conv_vector_delta, self.filter_shape)
+        #print(z_conv_vector_delta.shape)
+        #print(previous_a_vector_delta.shape)
+        #print(previous_a_vector.shape)
+        return [previous_a_vector_delta, b_delta, w_delta]
 
 
 
@@ -466,6 +475,9 @@ class FullyConnectedLayer(object):
         return [z_vector, a_vector]
 
     def get_delta(self, a_vector_delta, z_vector, previous_a_vector):
+        #print(a_vector_delta.shape)
+        #print(z_vector.shape)
+        #print(previous_a_vector.shape)
         z_vector_prime = self.activation.derivative(z_vector)
         # производная сигмоиды в точках вектора z
         z_vector_delta = a_vector_delta * z_vector_prime
@@ -515,9 +527,10 @@ class WeightInitializer:
         return weights
 
 def dimshuffle(biases, add_shape):
-    result = np.array((biases.shape[0],add_shape[0],add_shape[1]))
+    result = np.zeros((biases.shape[0], add_shape[0], add_shape[1]))
     for i in range (len(biases)):
         b = biases[i]
+        #print(b)
         result[i] = np.full(add_shape,b)
     return result
 
@@ -566,9 +579,14 @@ def convolute_2d(image, filter_shape, weights):
     for convoluted_image_layer_index in range (filter_shape[0]):
         for i in range (convoluted_image.shape[1]):
             for j in range (convoluted_image.shape[2]):
-                result = image[:][i:i+filter_shape[2]][j:j+filter_shape[3]]
-                print(i+filter_shape[2])
-                print(result.shape)
+                #result = image[:][i:i+filter_shape[2]][j:j+filter_shape[3]]
+                result = np.array([[[image[kk][i+ii][j+jj] for jj in range (filter_shape[3])]
+                                    for ii in range(filter_shape[2])]
+                                   for kk in range (image.shape[0])])
+                #print(i+filter_shape[2])
+                #print(result.shape)
+                #print(result)
+                #print(result.shape)
                 convoluted_image[convoluted_image_layer_index][i][j]\
                     = np.sum(result*weights[convoluted_image_layer_index])
     return convoluted_image
@@ -577,12 +595,15 @@ def get_weights_convlayer_derivative(previous_a_vector, z_conv_vector_delta, wei
     previous_a_vector_shape = previous_a_vector.shape
     z_conv_vector_delta_shape = z_conv_vector_delta.shape
     weights = np.zeros(weights_shape)
-    for output_layer_index in weights_shape[0]:
-        for input_layer_index in weights_shape[1]:
+    for output_layer_index in range (weights_shape[0]):
+        for input_layer_index in range (weights_shape[1]):
             for y in range (weights_shape[2]):
                 for x in range(weights_shape[3]):
+                    #weights[output_layer_index][input_layer_index][y][x]\
+                    #    = np.sum(previous_a_vector[input_layer_index][y:y+z_conv_vector_delta_shape[1]][x:x+z_conv_vector_delta_shape[2]]\
+                    #    * z_conv_vector_delta[output_layer_index])
                     weights[output_layer_index][input_layer_index][y][x]\
-                        = np.sum(previous_a_vector[input_layer_index][y:y+z_conv_vector_delta_shape[1]][x:x+z_conv_vector_delta_shape[2]]\
+                        = np.sum([[previous_a_vector[input_layer_index][y+yy][x+xx] for xx in range (z_conv_vector_delta_shape[2])] for yy in range (z_conv_vector_delta_shape[1])]\
                         * z_conv_vector_delta[output_layer_index])
 
 def backpropagate_derivatives_conv_layer(weights, z_conv_vector_delta, filter_shape):
@@ -597,9 +618,11 @@ def backpropagate_derivatives_conv_layer(weights, z_conv_vector_delta, filter_sh
                                    filter_shape[3],filter_shape[2]))
     for input_image_layer_index in range (filter_shape[1]):
         for output_image_layer_index in range (filter_shape[0]):
-            transposed_weights[input_image_layer_index][output_image_layer_index]\
-                = weights[output_image_layer_index][input_image_layer_index][::-1][::-1]
-    return convolute_2d(z_conv_vector_delta, filter_shape, transposed_weights)
+            #transposed_weights[input_image_layer_index][output_image_layer_index]\
+            #    = weights[output_image_layer_index][input_image_layer_index][::-1][::-1]
+            transposed_weights[input_image_layer_index][output_image_layer_index] \
+                = weights[output_image_layer_index][input_image_layer_index][::-1].transpose()[::-1]
+    return convolute_2d(z_conv_vector_delta, transposed_weights.shape, transposed_weights)
     #    for i in range (convoluted_image.shape[1]):
     #        for j in range (convoluted_image.shape[2]):
     #            result = image[:][i:i+filter_shape[2]][j:j+filter_shape[3]]
