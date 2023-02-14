@@ -580,7 +580,7 @@ def convolute_2d(image, filter_shape, weights):
         for i in range (convoluted_image.shape[1]):
             for j in range (convoluted_image.shape[2]):
                 #result = image[:][i:i+filter_shape[2]][j:j+filter_shape[3]]
-                result = np.array([[[image[kk][i+ii][j+jj] for jj in range (filter_shape[3])]
+                conv_for = np.array([[[image[kk][i+ii][j+jj] for jj in range (filter_shape[3])]
                                     for ii in range(filter_shape[2])]
                                    for kk in range (image.shape[0])])
                 #print(i+filter_shape[2])
@@ -588,8 +588,40 @@ def convolute_2d(image, filter_shape, weights):
                 #print(result)
                 #print(result.shape)
                 convoluted_image[convoluted_image_layer_index][i][j]\
-                    = np.sum(result*weights[convoluted_image_layer_index])
+                    = np.sum(conv_for*weights[convoluted_image_layer_index])
     return convoluted_image
+
+def wide_convolute_2d(image, filter_shape, weights):
+    # широкая свертка (больше размер выхода из-за другой обработки краев каждого слоя)
+    # (здесь свертка применяется так,
+    # чтобы включала хотя бы 1 активацию из предыдущего слоя, а не обязательно сразу все)
+    # image is a 3 dimensional: image_layers_count, x, y
+    # convoluted_image is a 3 dimensional: image_out_layers_count, x, y
+    # weights.shape === filter_shape
+    image_shape = image.shape
+    convoluted_image = np.zeros((filter_shape[0],
+                            image_shape[1]+filter_shape[2]-1,
+                            image_shape[2]+filter_shape[3]-1))
+    for convoluted_image_layer_index in range (filter_shape[0]):
+        for i in range (convoluted_image.shape[1]):
+            for j in range (convoluted_image.shape[2]):
+                #result = image[:][i:i+filter_shape[2]][j:j+filter_shape[3]]
+                print(i-filter_shape[2]+1)
+                print(j-filter_shape[3]+1)
+                conv_for = \
+                    np.array([[[(image[kk][i-filter_shape[2]+1+ii][j-filter_shape[3]+1+jj]
+                                 *(i-filter_shape[2]+1+ii > 0 and j-filter_shape[3]+1+jj > 0))
+                                     for jj in range (filter_shape[3])]
+                                    for ii in range (filter_shape[2])]
+                                   for kk in range (image.shape[0])])
+                #print(i+filter_shape[2])
+                #print(result.shape)
+                #print(result)
+                #print(result.shape)
+                convoluted_image[convoluted_image_layer_index][i][j]\
+                    = np.sum(conv_for*weights[convoluted_image_layer_index])
+    return convoluted_image
+
 
 def get_weights_convlayer_derivative(previous_a_vector, z_conv_vector_delta, weights_shape):
     previous_a_vector_shape = previous_a_vector.shape
@@ -622,7 +654,9 @@ def backpropagate_derivatives_conv_layer(weights, z_conv_vector_delta, filter_sh
             #    = weights[output_image_layer_index][input_image_layer_index][::-1][::-1]
             transposed_weights[input_image_layer_index][output_image_layer_index] \
                 = weights[output_image_layer_index][input_image_layer_index][::-1].transpose()[::-1]
-    return convolute_2d(z_conv_vector_delta, transposed_weights.shape, transposed_weights)
+    #print(transposed_weights.shape)
+    print(wide_convolute_2d(z_conv_vector_delta, transposed_weights.shape, transposed_weights).shape)
+    return wide_convolute_2d(z_conv_vector_delta, transposed_weights.shape, transposed_weights)
     #    for i in range (convoluted_image.shape[1]):
     #        for j in range (convoluted_image.shape[2]):
     #            result = image[:][i:i+filter_shape[2]][j:j+filter_shape[3]]
