@@ -458,7 +458,7 @@ class ConvPoolLayer(object):
         #print(z_conv_vector_delta.shape)
         #print(previous_a_vector_delta.shape)
         #print(previous_a_vector.shape)
-        return [previous_a_vector_delta, np.array(b_delta)/100, np.array(w_delta)/100]
+        return [previous_a_vector_delta, np.array(b_delta), np.array(w_delta)]
 
 
 
@@ -584,17 +584,14 @@ def convolute_2d(image, filter_shape, weights):
     convoluted_image = np.zeros((filter_shape[0],
                             image_shape[1]-filter_shape[2]+1,
                             image_shape[2]-filter_shape[3]+1))
-    for convoluted_image_layer_index in range (filter_shape[0]):
-        for i in range (convoluted_image.shape[1]):
-            for j in range (convoluted_image.shape[2]):
-                #result = image[:][i:i+filter_shape[2]][j:j+filter_shape[3]]
-                conv_for = np.array([[[image[kk][i+ii][j+jj] for jj in range (filter_shape[3])]
-                                    for ii in range(filter_shape[2])]
-                                   for kk in range (image.shape[0])])
-                #print(i+filter_shape[2])
-                #print(result.shape)
-                #print(result)
-                #print(result.shape)
+
+    for i in range (convoluted_image.shape[1]):
+        for j in range (convoluted_image.shape[2]):
+            #result = image[:][i:i+filter_shape[2]][j:j+filter_shape[3]]
+            conv_for = np.array([[[image[kk][i+ii][j+jj] for jj in range (filter_shape[3])]
+                                for ii in range(filter_shape[2])]
+                               for kk in range (image.shape[0])])
+            for convoluted_image_layer_index in range(filter_shape[0]):
                 convoluted_image[convoluted_image_layer_index][i][j]\
                     = np.sum(conv_for*weights[convoluted_image_layer_index])
     return convoluted_image
@@ -611,23 +608,20 @@ def wide_convolute_2d(image, filter_shape, weights):
                             image_shape[1]+filter_shape[2]-1,
                             image_shape[2]+filter_shape[3]-1))
     #print(convoluted_image.shape)
-    for convoluted_image_layer_index in range (filter_shape[0]):
-        for i in range (convoluted_image.shape[1]):
-            for j in range (convoluted_image.shape[2]):
-                #result = image[:][i:i+filter_shape[2]][j:j+filter_shape[3]]
-                #print(i-filter_shape[2]+1)
-                #print(j-filter_shape[3]+1)
-                conv_for = \
-                    np.array([[[(0 if not (image_shape[1]>i-filter_shape[2]+1+ii >= 0 and image_shape[2]>j-filter_shape[3]+1+jj >= 0)
-                    else image[kk][i-filter_shape[2]+1+ii][j-filter_shape[3]+1+jj])
-                                     for jj in range (filter_shape[3])]
-                                    for ii in range (filter_shape[2])]
-                                   for kk in range (image.shape[0])])
-                # то что выше переписать на if-else 613 и 614 строку
-                #print(i+filter_shape[2])
-                #print(result.shape)
-                #print(result)
-                #print(result.shape)
+
+    for i in range (convoluted_image.shape[1]):
+        for j in range (convoluted_image.shape[2]):
+            #result = image[:][i:i+filter_shape[2]][j:j+filter_shape[3]]
+            #print(i-filter_shape[2]+1)
+            #print(j-filter_shape[3]+1)
+            conv_for = \
+                np.array([[[(0 if not (image_shape[1]>i-filter_shape[2]+1+ii >= 0 and image_shape[2]>j-filter_shape[3]+1+jj >= 0)
+                else image[kk][i-filter_shape[2]+1+ii][j-filter_shape[3]+1+jj])
+                                 for jj in range (filter_shape[3])]
+                                for ii in range (filter_shape[2])]
+                               for kk in range (image.shape[0])])
+
+            for convoluted_image_layer_index in range(filter_shape[0]):
                 convoluted_image[convoluted_image_layer_index][i][j]\
                     = np.sum(conv_for*weights[convoluted_image_layer_index])
     return convoluted_image
